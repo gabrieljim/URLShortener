@@ -15,8 +15,7 @@ var app = express();
 var port = process.env.PORT || 3000;
 
 /** this project needs a db !! **/ 
-
-console.log(Url);
+mongoose.connect(process.env.URL, {useNewUrlParser:true, useUnifiedTopology:true, useFindAndModify: false})
 
 app.use(cors());
 
@@ -37,70 +36,52 @@ app.post("/api/shorturl/new", function (req, res) {
 	let regex = /http(s)?:\/\/[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/gm
 
 	if (!origUrl.match(regex)) {
-		return res.json({error: 'invalid URL'})
+		return res.status(400).json({error: 'invalid URL (add https://)'})
 	}
 
 	// First of all check if the given url exists
-	dns.lookup(origUrl.replace(/https?:\/\//,''), (err,address,family) => {
+	dns.lookup(origUrl.replace(/https?:\/\//,''), (err,address) => {
 		if (!address) {
 			res.status(400).json({error: 'invalid URL'})
 		}
 		else {
-			mongoose.connect(process.env.URL, {useNewUrlParser:true, useUnifiedTopology:true})
-			let db = mongoose.connection;
-
-			db.on('error', (error) => console.log(error));
-
-			db.once('open', () => {
-				console.log('Connected to database...');
-				
-				// Check if the sent url already exists
-				Url.findOne({original_url: origUrl}, (err, doc) => {
-					if (doc != null){
-						res.status(400).json({
-							error: "Hostname exists on database",
-							existing_shortened_url: doc.short_url
+			// Check if the sent url already exists
+			Url.findOne({original_url: origUrl}, (err, doc) => {
+				if (doc != null){
+					res.status(400).json({
+						error: "Hostname exists on database",
+						existing_shortened_url: doc.short_url
+					})
+				} else {
+					Url.countDocuments({}, (err, count) => {
+						let newUrl = new Url({
+							original_url: origUrl,
+						});
+						newUrl.save( (err) => {
+							if (err) {
+								console.error(err)
+							}
+							else {
+								res.status(200).json(newUrl)
+							}
 						})
-
-					} else {
-						Url.countDocuments({}, (err, count) => {
-							let newUrl = new Url({
-								original_url: origUrl,
-								short_url: count+1
-							});
-							newUrl.save(err => {
-								if (err) {
-									console.log(err)
-								}
-								else {
-									res.status(200).json(newUrl)
-								}
-							})
-						})
-					}
-				})
+					})
+				}
 			})
 		}
 	})
 });
 
 app.get('/api/shorturl/:id', (req, res,) =>  {
-	mongoose.connect(process.env.URL, {useNewUrlParser:true, useUnifiedTopology:true})
-	let db = mongoose.connection;
-
-	db.on('error', err => console.error(err));
-
-	db.once('open', () => {
-		Url.findOne({short_url: req.params.id}, (err, doc) => {
-			if (doc) {
-				res.status(301).redirect(doc.original_url)
-			}
-			else {
-				res.json({
-					error: "Entry doesn't exist on database"
-				})
-			}
-		})
+	Url.findOne({short_url: req.params.id}, (err, doc) => {
+		if (doc) {
+			res.status(301).redirect(doc.original_url)
+		}
+		else {
+			res.json({
+				error: "Entry doesn't exist on database"
+			})
+		}
 	})
 })
 

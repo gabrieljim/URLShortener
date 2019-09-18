@@ -12,7 +12,8 @@
 		"dotenv": "^8.1.0",
 		"express": "^5.0.0-alpha.2",
 		"mongodb": "^2.2.5",
-		"mongoose": "^5.7.1"
+		"mongoose": "^5.7.1",
+		"mongoose-auto-increment": "^5.0.1"
 	},
 	"engines": {
 		"node": "4.4.5"
