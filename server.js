@@ -36,15 +36,14 @@ app.post("/api/shorturl/new", function (req, res) {
 	let regex = /http(s)?:\/\/[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/gm
 
 	if (!origUrl.match(regex)) {
-		return res.status(400).json({error: 'invalid URL (add https://)'})
+		return res.status(400).json({error: 'invalid URL (did you add http(s)://?)'})
 	}
 
 	// First of all check if the given url exists
 	dns.lookup(origUrl.replace(/https?:\/\//,''), (err,address) => {
 		if (!address) {
 			res.status(400).json({error: 'invalid URL'})
-		}
-		else {
+		} else {
 			// Check if the sent url already exists
 			Url.findOne({original_url: origUrl}, (err, doc) => {
 				if (doc != null){
@@ -53,18 +52,16 @@ app.post("/api/shorturl/new", function (req, res) {
 						existing_shortened_url: doc.short_url
 					})
 				} else {
-					Url.countDocuments({}, (err, count) => {
-						let newUrl = new Url({
-							original_url: origUrl,
-						});
-						newUrl.save( (err) => {
-							if (err) {
-								console.error(err)
-							}
-							else {
-								res.status(200).json(newUrl)
-							}
-						})
+					let newUrl = new Url({
+						original_url: origUrl,
+					});
+					newUrl.save( (err) => {
+						if (err) {
+							console.error(err)
+						}
+						else {
+							res.status(200).json(newUrl)
+						}
 					})
 				}
 			})
@@ -78,7 +75,7 @@ app.get('/api/shorturl/:id', (req, res,) =>  {
 			res.status(301).redirect(doc.original_url)
 		}
 		else {
-			res.json({
+			res.status(404).json({
 				error: "Entry doesn't exist on database"
 			})
 		}
